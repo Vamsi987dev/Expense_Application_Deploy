@@ -1,0 +1,10 @@
+@Library('Jenkins-shared-library') _
+
+def configMap = [
+    PROJECT   : "expense",
+    COMPONENT : "frontend",
+    AWS_REGION: "us-east-1",
+    ACCOUNT_ID: "222634367824"
+]
+
+nodejsCD(configMap)
