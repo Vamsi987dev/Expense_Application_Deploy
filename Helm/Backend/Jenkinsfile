@@ -42,7 +42,7 @@ pipeline {
 
                     kubectl get nodes
 
-                    helm upgrade --install $COMPONENT ./helm \
+                    helm upgrade --install $COMPONENT ./Helm/Backend \
                     --namespace $PROJECT \
                     --create-namespace \
                     --set deployment.tag=$IMAGE_TAG \
