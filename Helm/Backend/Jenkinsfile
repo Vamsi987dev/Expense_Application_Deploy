@@ -32,33 +32,26 @@ pipeline {
 
     stages {
 
-        stage('Authenticate to EKS') {
+        stage('Deploy to EKS') {
             steps {
                 withAWS(region: "${AWS_REGION}", credentials: "aws-creds-${ENV}") {
                     sh '''
                     aws eks update-kubeconfig \
                     --region $AWS_REGION \
                     --name $CLUSTER
+
+                    kubectl get nodes
+
+                    helm upgrade --install $COMPONENT ./helm \
+                    --namespace $PROJECT \
+                    --create-namespace \
+                    --set deployment.tag=$IMAGE_TAG \
+                    --set environment=$ENV \
+                    --wait --timeout 5m
                     '''
                 }
             }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                echo "Deploying image: $IMAGE_TAG to $ENV"
-
-                helm upgrade --install $COMPONENT ./helm \
-                --namespace $PROJECT \
-                --create-namespace \
-                --set deployment.tag=$IMAGE_TAG \
-                --set environment=$ENV \
-                --wait --timeout 5m
-                '''
-            }
-        }
-
+        }   
     }
 
     post {
