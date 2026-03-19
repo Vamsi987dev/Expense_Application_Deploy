@@ -1,10 +1,66 @@
-@Library('Jenkins-shared-library') _
+pipeline {
+    agent { label 'agent' }
 
-def configMap = [
-    PROJECT   : "expense",
-    COMPONENT : "frontend",
-    AWS_REGION: "us-east-1",
-    ACCOUNT_ID: "222634367824"
-]
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
 
-nodejsCD(configMap)
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'qa', 'uat', 'prod'],
+            description: 'Select Environment'
+        )
+        string(
+            name: 'IMAGE_TAG',
+            description: 'Docker image tag to deploy'
+        )
+    }
+
+    environment {
+        AWS_REGION = "us-east-1"
+        ACCOUNT_ID = "222634367824"
+        PROJECT    = "expense"
+        COMPONENT  = "frontend"
+
+        ENV        = "${params.ENVIRONMENT}"
+
+        ECR_REPO = "${PROJECT}/${ENV}/${COMPONENT}"
+        CLUSTER  = "${PROJECT}-${ENV}"
+    }
+
+    stages {
+
+        stage('Deploy to EKS') {
+            steps {
+                withAWS(region: "${AWS_REGION}", credentials: "aws-creds-${ENV}") {
+                    sh '''
+                    aws eks update-kubeconfig \
+                    --region $AWS_REGION \
+                    --name $CLUSTER
+
+                    kubectl get nodes
+
+                    helm upgrade --install $COMPONENT ./Helm/Backend \
+                    --namespace $PROJECT \
+                    --create-namespace \
+                    --set deployment.tag=$IMAGE_TAG \
+                    --set environment=$ENV \
+                    --wait --timeout 5m
+                    '''
+                }
+            }
+        }   
+    }
+
+    post {
+        success {
+            echo "Deployment successful: ${COMPONENT}:${params.IMAGE_TAG} → ${params.ENVIRONMENT}"
+        }
+
+        failure {
+            echo "Deployment failed. Check logs."
+        }
+    }
+}
