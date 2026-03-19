@@ -47,7 +47,7 @@ pipeline {
                     --create-namespace \
                     --set deployment.tag=$IMAGE_TAG \
                     --set environment=$ENV \
-                    --wait --timeout 5m
+                    --wait --timeout 10m
                     '''
                 }
             }
